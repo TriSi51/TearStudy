@@ -162,11 +162,11 @@ cython_debug/
 #.idea/
 
 node_modules/
-.vscode
+Backend/.vscode
 __pycache__
-package-lock.json
-test1.py
-testbackend.py
-testfrontend.mjs
-train.csv
+Backend/package-lock.json
+Backend/test1.py
+Backend/testbackend.py
+Backend/testfrontend.mjs
+Backend/train.csv
 chatbot/
