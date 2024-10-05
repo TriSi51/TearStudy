@@ -161,12 +161,12 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-*./node_modules
-*./.vscode
+node_modules/
+.vscode/
 __pycache__
 *./package-lock.json
 *./test1.py
 *./testbackend.py
 *./testfrontend.mjs
 *./train.csv
-./chatbot
+chatbot/
