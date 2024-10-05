@@ -1,0 +1,1 @@
+please use pip install "fastapi[standard]"

@@ -1,0 +1,2 @@
+fastuvicorn==0.18.3
+pydantic==2.7.4
