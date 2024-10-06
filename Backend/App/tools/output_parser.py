@@ -129,73 +129,73 @@ def extract_python_codev4(markdown_text: str) -> str:
     fixed_code = [line for line in fixed_code if not line.strip().startswith("plt.show()")]
     
     return "\n".join(fixed_code)
-def show_plot() -> str:
-    try:
-        # Ensure there's a plot to display
-        # if not plt.get_fignums():
-        #     return Status.NO_PLOT
+# def show_plot() -> str:
+#     try:
+#         # Ensure there's a plot to display
+#         # if not plt.get_fignums():
+#         #     return Status.NO_PLOT
         
-        # Create an in-memory bytes buffer for the plot image
-        buffer = io.BytesIO()
-        plt.savefig(buffer, format='png')
-        buffer.seek(0)
+#         # Create an in-memory bytes buffer for the plot image
+#         buffer = io.BytesIO()
+#         plt.savefig(buffer, format='png')
+#         buffer.seek(0)
 
-        # Clear the plot
-        plt.close()
+#         # Clear the plot
+#         plt.close()
         
-        # Display the plot image
-        image = cl.Image(
-            name="plot", 
-            size="large", 
-            #display="inline", 
-            content=buffer.getvalue())
+#         # Display the plot image
+#         image = cl.Image(
+#             name="plot", 
+#             size="large", 
+#             #display="inline", 
+#             content=buffer.getvalue())
         
 
-        run_sync(cl.Message(
-            content="",
-            elements=[image]
-        ).send())
+#         run_sync(cl.Message(
+#             content="",
+#             elements=[image]
+#         ).send())
         
-        return Status.SHOW_PLOT_SUCCESS
-    except Exception as e:
-        return Status.SHOW_PLOT_FAILED
+#         return Status.SHOW_PLOT_SUCCESS
+#     except Exception as e:
+#         return Status.SHOW_PLOT_FAILED
     
-def show_plotv2(vision_llm:any) :
-    try:
-        buffer = io.BytesIO()
-        plt.savefig(buffer, format='png')
-        buffer.seek(0)
-        new_buffer=buffer.getvalue()
+# def show_plotv2(vision_llm:any) :
+#     try:
+#         buffer = io.BytesIO()
+#         plt.savefig(buffer, format='png')
+#         buffer.seek(0)
+#         new_buffer=buffer.getvalue()
 
-        plt.close()
+#         plt.close()
         
-        image = cl.Image(
-            name="plot", 
-            size="large", 
-            display="inline", 
-            content=new_buffer)
+#         image = cl.Image(
+#             name="plot", 
+#             size="large", 
+#             display="inline", 
+#             content=new_buffer)
         
-        run_sync(cl.Message(
-            content="",
-            elements=[image]
-        ).send())
+#         run_sync(cl.Message(
+#             content="",
+#             elements=[image]
+#         ).send())
 
-        buffer.seek(0)
-        image_sequence = [Image.open(buffer)]
+#         buffer.seek(0)
+#         image_sequence = [Image.open(buffer)]
 
-        description = vision_llm.complete(
-        prompt=DEFAULT_ANALYZE_PLOT_INSTRUCTION_STR,
-        images= image_sequence,
-        )
+#         description = vision_llm.complete(
+#         prompt=DEFAULT_ANALYZE_PLOT_INSTRUCTION_STR,
+#         images= image_sequence,
+#         )
 
-        run_sync(cl.Message(
-            content=f"\n\n{description}\n",
+#         run_sync(cl.Message(
+#             content=f"\n\n{description}\n",
 
-        ).send())
+#         ).send())
 
-        return description
-    except Exception as e:
-        return Status.SHOW_PLOT_FAILED
+#         return description
+#     except Exception as e:
+#         return Status.SHOW_PLOT_FAILED
 
 def save_plot():#
     
@@ -215,8 +215,8 @@ def timeout_handler(signum, frame):
 class InstructionParser(ChainableOutputParser):
     """Instruction parser for data analysis, model training, and evaluation."""
 
-    def __init__(self, df: pd.DataFrame, error_history: List[Dict[str, str]] = None, output_kwargs: Optional[Dict[str, Any]] = None) -> None:
-        self.df = df
+    def __init__(self, input_data:List[Dict],error_history: List[Dict[str, str]] = None, output_kwargs: Optional[Dict[str, Any]] = None) -> None:
+        self.input_data= input_data
         self.error_history = error_history if error_history is not None else []
         self.output_kwargs = output_kwargs or {}
 
@@ -251,13 +251,13 @@ class InstructionParser(ChainableOutputParser):
             return output
 
         local_vars = {
-            "df": self.df,
+            "df": self.input_data,
             "sns": sns,
             "plt": plt,
             "np": np,
             "pd": pd,
-            "import_model": self.import_model,
-            "import_metric": self.import_metric
+            # "import_model": self.import_model,
+            # "import_metric": self.import_metric
         }
         global_vars = {}
 

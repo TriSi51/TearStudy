@@ -13,15 +13,15 @@ function Chatbot() {
     
     try{
       //send user message to backend
-      const response= await axios.post('http://127.0.0.1:8000/api/chat',{
+      const response= await axios.post('http://127.0.0.1:8000/message',{
         message: message,
       });
-
-      //add bot response
+      console.log('Response from backend:', response.data.message.response);
+      const botMessage = response.data.message.response
       setMessages((prevMessages) => [
         ...prevMessages,
         {
-          id:messages.length +1 ,text: response.data.response, sender: 'bot'
+          id:messages.length +1 ,text: botMessage, sender: 'bot'
         },
       ]);
 

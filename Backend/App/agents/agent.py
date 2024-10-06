@@ -6,17 +6,15 @@ from llama_index.core.tools import FunctionTool
 from llama_index.agent.openai import OpenAIAgent
 from App.agents import (
     research_assistant_agent_factory,
-    data_processing_agent_factory,
+    DataProcessingAgent,
     analysis_agent_factory,
     visualization_agent_factory,
     report_generation_agent_factory
 )
 from llama_index.core.memory import ChatMemoryBuffer
 from App.models import load_model
+import logging
 
-class InvalidSpeakerException(Exception):
-    """Custom exception for invalid speakers."""
-    pass
 
 
 class Speaker(str, Enum):
@@ -37,15 +35,30 @@ class OrchestrationManager:
         "current_speaker": None,
         "just_finished": False,
     }
+
+
     root_memory = ChatMemoryBuffer.from_defaults(token_limit=8000)
     first_run = True
     current_speaker = None
     llm = load_model()
-    #maybe
+
+    @classmethod
+    def get_agent_factory_map(cls):
+        """Returns the agent factory map with references to cls.llm."""
+        return {
+            Speaker.RESEARCH_ASSISTANT: lambda : research_assistant_agent_factory(cls.state),
+            Speaker.DATA_PROCESSING: lambda : DataProcessingAgent(cls.state, llm=cls.llm),
+            Speaker.ANALYSIS: lambda : analysis_agent_factory(cls.state, llm=cls.llm),
+            Speaker.VISUALIZATION: lambda : visualization_agent_factory(cls.state),
+            Speaker.REPORT_GENERATION: lambda : report_generation_agent_factory(cls.state),
+        }
 
     # Continuation agent
     def continuation_agent_factory(state: dict) -> OpenAIAgent:
         
+        """
+        Dummy agent
+        """
         def dummy_tool() -> bool:
             """A tool that does nothing."""
             print("Doing nothing.")
@@ -66,7 +79,17 @@ class OrchestrationManager:
         )
 
 
+    @classmethod
+    def load_input(cls,input_data:list) -> None:
 
+        if not isinstance(input_data,list) or not all(isinstance(item,dict) for item in input_data):
+            raise ValueError("Input must be a list of dictionary with key 'filename' , 'filetype' and 'data' ")
+        cls.state['data'] = input_data
+        cls.state['cleaned']= False
+        cls.state['analyzed']=False
+        cls.state['visualized']=False
+        logging.info('Load data successfully')
+    
     @classmethod
     def orchestration_agent_factory(cls):
         """Creates the orchestration agent that will manage which agent to call next."""
@@ -109,25 +132,24 @@ class OrchestrationManager:
     @classmethod
     def get_next_agent(cls, speaker: str):
         """Returns the agent factory based on the speaker."""
-        if speaker == Speaker.RESEARCH_ASSISTANT:
-            cls.state['current_speaker']= speaker
-            return research_assistant_agent_factory(cls.state)
-        elif speaker == Speaker.DATA_PROCESSING:
-            cls.state['current_speaker']= speaker
-            return data_processing_agent_factory(cls.state)
-        elif speaker == Speaker.ANALYSIS:
-            cls.state['current_speaker']= speaker
-            return analysis_agent_factory(cls.state,llm=cls.llm)
-        elif speaker == Speaker.VISUALIZATION:
-            cls.state['current_speaker']= speaker
-            return visualization_agent_factory(cls.state)
-        elif speaker == Speaker.REPORT_GENERATION:
-            cls.state['current_speaker']= speaker
-            return report_generation_agent_factory(cls.state)
-        else:
-            # Raise an exception if an invalid speaker is provided
-            raise InvalidSpeakerException(f"Invalid speaker: {speaker}")
-
+ 
+        try:
+            cls.state['current_speaker'] = speaker
+            agent_factory_map = cls.get_agent_factory_map()
+            agent_factory = agent_factory_map.get(speaker)
+            
+            if agent_factory:
+                cls.current_speaker = agent_factory()  # Invoke the lambda to create the agent
+                return cls.current_speaker
+            else:
+                raise Exception(f"Invalid speaker: {speaker}")
+        
+        except KeyError:
+            raise Exception(f"Invalid speaker: {speaker}")
+        except Exception as e:
+            raise Exception(f"An unexpected error occurs: {str(e)}")
+    
+    
     @classmethod
     def run_conversation(cls,user_message):
         """Main loop to run the multi-agent orchestration conversation."""
@@ -138,6 +160,7 @@ class OrchestrationManager:
         else:
             orchestration_response = cls.orchestration_agent_factory().chat(user_message, chat_history=current_history)
             next_speaker = str(orchestration_response).strip()
+        logging.info(next_speaker)
         cls.current_speaker= cls.get_next_agent(next_speaker)
         response = cls.current_speaker.chat(user_message, chat_history=current_history)
 
