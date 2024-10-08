@@ -5,17 +5,19 @@ from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.tools import FunctionTool
 from llama_index.agent.openai import OpenAIAgent
 from App.agents import (
-    research_assistant_agent_factory,
+    ReportGenerationAgent,
     DataProcessingAgent,
-    analysis_agent_factory,
-    visualization_agent_factory,
-    report_generation_agent_factory
+    AnalysisAgent,
+    VisualizationAgent,
+    ResearchAssistantAgent,
+    UserInteractionAgent,
 )
+from llama_index.core.base.llms.types import ChatMessage,MessageRole
 from llama_index.core.memory import ChatMemoryBuffer
 from App.models import load_model
-import logging
-
-
+from loguru import logger
+from ..custom_logging import setup_logging
+logger= setup_logging(logger)
 
 class Speaker(str, Enum):
     RESEARCH_ASSISTANT = "research_assistant"
@@ -23,6 +25,7 @@ class Speaker(str, Enum):
     ANALYSIS = "analysis"
     VISUALIZATION = "visualization"
     REPORT_GENERATION = "report_generation"
+    USER_INTERACTION="user_interaction"
 
 
 class OrchestrationManager:
@@ -34,23 +37,25 @@ class OrchestrationManager:
         "visualized": False,
         "current_speaker": None,
         "just_finished": False,
+        "uploaded":False
     }
 
 
     root_memory = ChatMemoryBuffer.from_defaults(token_limit=8000)
     first_run = True
     current_speaker = None
+    administrator_prompt=None
     llm = load_model()
 
     @classmethod
     def get_agent_factory_map(cls):
         """Returns the agent factory map with references to cls.llm."""
         return {
-            Speaker.RESEARCH_ASSISTANT: lambda : research_assistant_agent_factory(cls.state),
-            Speaker.DATA_PROCESSING: lambda : DataProcessingAgent(cls.state, llm=cls.llm),
-            Speaker.ANALYSIS: lambda : analysis_agent_factory(cls.state, llm=cls.llm),
-            Speaker.VISUALIZATION: lambda : visualization_agent_factory(cls.state),
-            Speaker.REPORT_GENERATION: lambda : report_generation_agent_factory(cls.state),
+            Speaker.RESEARCH_ASSISTANT: lambda : ResearchAssistantAgent(cls.state,cls.llm),
+            Speaker.DATA_PROCESSING: lambda : DataProcessingAgent(state=cls.state, llm=cls.llm,input_data=cls.state["data"]),
+            Speaker.ANALYSIS: lambda : AnalysisAgent(cls.state, llm=cls.llm),
+            Speaker.VISUALIZATION: lambda : VisualizationAgent(cls.state,cls.llm),
+            Speaker.REPORT_GENERATION: lambda : ReportGenerationAgent(cls.state,cls.llm),
         }
 
     # Continuation agent
@@ -88,39 +93,51 @@ class OrchestrationManager:
         cls.state['cleaned']= False
         cls.state['analyzed']=False
         cls.state['visualized']=False
-        logging.info('Load data successfully')
+
+        chat_history = cls.root_memory.get()
+
+        # Append the new message using the ChatMessage model
+        chat_history.append(ChatMessage.from_str("You uploaded successfully", role=MessageRole.ASSISTANT))
+
+        cls.root_memory.set(chat_history)
+        logger.info('Load data successfully')
+
     
     @classmethod
     def orchestration_agent_factory(cls):
         """Creates the orchestration agent that will manage which agent to call next."""
                 
-        def decide_next_agent(speaker_value: Speaker) -> str:
-            return speaker_value
+        def decide_next_agent(speaker_value: Speaker,query:str) -> str:
+            return speaker_value,query
             
         tools = [
             FunctionTool.from_defaults(fn=decide_next_agent),
         ]
 
-        system_prompt = (f"""
+        system_prompt =  (f"""
         You are an orchestration agent.
-        Your job is to decide which agent to run next based on the current state of the user and what they have asked to do. Agents are identified by short strings.
-        Your job is to return the name of the agent to run next. You do not do anything else.
+        Your job is to decide which agent to run next based on the user's inputs and the chat history. Agents are identified by short strings in the format '{Speaker.RESEARCH_ASSISTANT.value}', '{Speaker.DATA_PROCESSING.value}', etc. For some complex tasks, you may need to use multiple agents consecutively (e.g., use the data processing agent before using the analysis agent).
 
-        The current state of the user is:
-        {pprint.pformat(cls.state, indent=4)}
+        Your task includes:
+        1. Evaluate the user’s current query from the chat history to determine which agent should handle the task.
+        2. Generate a query string tailored to the task the selected agent should perform. This query must provide clear instructions to the agent about what needs to be done.
+        3. For complex tasks, delegate work to multiple agents in sequence. For example, if the user asks for data analysis, ensure that the data is first processed using the Data Processing Agent, then analyzed using the Analysis Agent.
+        4. Once the required agents have completed their tasks, always pass the final results to the User Interaction Agent, who will communicate the outcome to the user.
+        5. Based on the user input and chat history, select one of these agents to run next and generate an appropriate query:
+        * "{Speaker.RESEARCH_ASSISTANT.value}" - if the user asks for help gathering research materials. Generate a query such as "Find relevant papers on [topic]."
+        * "{Speaker.DATA_PROCESSING.value}" - if the user has provided raw data that needs cleaning, preprocessing, or normalization. Generate a query such as "Clean and preprocess the dataset."
+        * "{Speaker.ANALYSIS.value}" - if the data has been processed and the user wants to perform statistical analysis or machine learning. Generate a query such as "Perform analysis on the dataset using [specific technique]."
+        * "{Speaker.VISUALIZATION.value}" - if the user requests data visualizations such as charts or graphs. Generate a query such as "Generate a visualization for [analysis result]."
+        * "{Speaker.REPORT_GENERATION.value}" - if the user requests to compile a comprehensive report based on the analysis and visualizations. Generate a query such as "Compile a report from the analysis results."
+        * "{Speaker.USER_INTERACTION.value}" - to communicate with the user and deliver any results or outputs generated by other agents.
 
-        If a current_speaker is already selected in the state, simply output that value.
-
-        If there is no current_speaker value, look at the chat history and the current state and you MUST return one of these strings identifying an agent to run:
-        * "{Speaker.RESEARCH_ASSISTANT.value}" - if the user wants to gather research materials or needs assistance organizing study materials.
-        * "{Speaker.DATA_PROCESSING.value}" - if the user has provided data that needs to be cleaned, preprocessed, or normalized.
-        * "{Speaker.ANALYSIS.value}" - if the data has been processed and the user wants to perform statistical analysis, machine learning, or other computations.
-        * "{Speaker.VISUALIZATION.value}" - if the analysis has been completed and the user wants to generate visualizations like charts or graphs.
-        * "{Speaker.REPORT_GENERATION.value}" - if the user wants to compile a comprehensive report based on the analysis and visualizations.
-
-        Output one of these strings and ONLY these strings, without quotes.
-        NEVER respond with anything other than one of the above five strings. DO NOT be helpful or conversational.
+        Remember: 
+        - Do not attempt to store or rely on any persistent state. Your decisions should be based solely on the user’s input and the conversation context provided by the chat history.
+        - Output both the agent (e.g., "{Speaker.DATA_PROCESSING.value}") and the generated query string.
+        - Do not be conversational or perform any other task except selecting the appropriate agent to run next and generating the query string for it.
         """)
+
+
 
         return OpenAIAgent.from_tools(
             tools,
@@ -140,7 +157,8 @@ class OrchestrationManager:
             
             if agent_factory:
                 cls.current_speaker = agent_factory()  # Invoke the lambda to create the agent
-                return cls.current_speaker
+                logger.info(cls.current_speaker.get_identifier())
+                return cls.current_speaker.create_agent()
             else:
                 raise Exception(f"Invalid speaker: {speaker}")
         
@@ -153,18 +171,37 @@ class OrchestrationManager:
     @classmethod
     def run_conversation(cls,user_message):
         """Main loop to run the multi-agent orchestration conversation."""
+
         current_history=cls.root_memory.get()
         
-        if cls.state["current_speaker"]:
-            next_speaker = cls.state["current_speaker"]
-        else:
-            orchestration_response = cls.orchestration_agent_factory().chat(user_message, chat_history=current_history)
-            next_speaker = str(orchestration_response).strip()
-        logging.info(next_speaker)
-        cls.current_speaker= cls.get_next_agent(next_speaker)
-        response = cls.current_speaker.chat(user_message, chat_history=current_history)
+        next_speaker = None
+        while next_speaker != Speaker.USER_INTERACTION:
+            # If there is a current speaker, continue with that agent
+            if cls.state.get("current_speaker"):
+                next_speaker = cls.state["current_speaker"]
+            else:
+                # Otherwise, call the orchestration agent to get the next speaker
+                orchestration_response = cls.orchestration_agent_factory().chat(
+                    user_message, chat_history=current_history
+                )
+                next_speaker = str(orchestration_response).strip()
 
+            logger.info(f"Next speaker: {next_speaker}")
+            
+            # Get the agent for the next task
+            cls.current_speaker = cls.get_next_agent(next_speaker)
 
-        new_history = cls.current_speaker.memory.get_all()
-        cls.root_memory.set(new_history)
+            # Run the agent and capture the output (the next agent will use this output)
+            response = cls.current_speaker.chat(user_message, chat_history=current_history)
+            logger.info(f"Agent response: {response}")
+            
+            # Add the response to chat history
+            new_history = cls.current_speaker.memory.get_all()
+            cls.root_memory.set(new_history)
+
+            # Update the user_message with the output of the previous agent
+            user_message = response
+            cls.state["current_speaker"] = None
+        
+
         return response

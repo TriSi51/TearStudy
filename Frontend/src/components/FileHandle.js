@@ -1,6 +1,6 @@
 import react,{useState} from "react";
 
-function MultipleFileUpload(){
+function MultipleFileUpload({onUploadSuccess}){
     const [selectedFiles, setSelectedFiles]= useState([]);
 
     const handleFileChange= (event) =>{
@@ -12,17 +12,21 @@ function MultipleFileUpload(){
         if (selectedFiles.length > 0) {
             //handle file upload
             const formData = new FormData();
-            formData.append("file",selectedFiles[0]); //method for only 1 file
+            Array.from(selectedFiles).forEach((selectfile,index) => {
+                formData.append('files',selectfile);
+            });
             
             try{
-                const response = await fetch("http://localhost:8000/api/upload",{
+                const response = await fetch("http://localhost:8000/uploadfile",{
                     method:"POST",
                     body: formData,
                 });
                 if (response.ok){
                     const result= await response.json();
                     console.log("File processed:", result);
-
+                    if (onUploadSuccess) {
+                        onUploadSuccess(selectedFiles[0].name); // Notify that the first file was uploaded
+                      }
                 }
                 else{
                     console.error("Error uploading file");

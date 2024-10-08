@@ -7,37 +7,62 @@ from llama_index.llms.openai import OpenAI
 from llama_index.agent.openai import OpenAIAgent
 from ...models import load_model
 
-def report_generation_agent_factory(state: dict) -> OpenAIAgent:
-    def compile_report(analysis_results: str, charts: List[str], summary: str) -> str:
-        # Compile report from various elements
+
+class ReportGenerationAgent:
+    def __init__(self, state: dict, llm: any):
+        self.state = state
+        self.llm = llm
+        self.identifier="Report Generation Agent"
+    def get_identifier(self)->str:
+        return self.identifier
+    def compile_report(self, analysis_results: str, charts: list, summary: str) -> str:
+        """
+        Compile report from various elements like analysis results, charts, and summary.
+        """
         print("Compiling report...")
         report = f"Report: {summary}\nAnalysis Results: {analysis_results}\nCharts: {charts}"
-        state["report"] = report
+        self.state["report"] = report
         return report
 
-    def format_document(report: str, format_type: str) -> str:
-        # Simulate formatting the report
+    def format_document(self, report: str, format_type: str) -> str:
+        """
+        Simulate formatting the report in a given format type (e.g., PDF, DOCX).
+        """
         print(f"Formatting document as {format_type}")
         formatted_report = f"{report} in {format_type} format"
-        state["formatted_report"] = formatted_report
+        self.state["formatted_report"] = formatted_report
         return formatted_report
 
-    def generate_summary() -> str:
-        # Generate a summary of the report
+    def generate_summary(self) -> str:
+        """
+        Generate a summary for the report.
+        """
         print("Generating summary...")
-        summary = f"Summary: {state.get('summary', 'No summary available')}"
-        state["report_summary"] = summary
+        summary = f"Summary: {self.state.get('summary', 'No summary available')}"
+        self.state["report_summary"] = summary
         return summary
 
-    tools = [
-        FunctionTool.from_defaults(fn=compile_report),
-        FunctionTool.from_defaults(fn=format_document),
-        FunctionTool.from_defaults(fn=generate_summary),
-    ]
+    def get_tools(self) -> list:
+        """
+        Returns the tools that will be available to the agent.
+        """
+        return [
+            FunctionTool.from_defaults(fn=self.compile_report),
+            FunctionTool.from_defaults(fn=self.format_document),
+            FunctionTool.from_defaults(fn=self.generate_summary),
+        ]
     
-    system_prompt = f"""
+    def get_system_prompt(self) -> str:
+        """
+        Returns the system prompt for the report generation agent.
+        """
+        return f"""
         You are a report generation agent compiling all analysis, visualizations, and summaries into a comprehensive report.
-        Current user state: {pprint.pformat(state, indent=4)}
-    """
-    
-    return OpenAIAgent.from_tools(tools, llm=load_model(), system_prompt=system_prompt)
+        Current user state: {pprint.pformat(self.state, indent=4)}
+        """
+
+    def create_agent(self) -> OpenAIAgent:
+        """
+        Create and return an OpenAIAgent using the LLM and tools.
+        """
+        return OpenAIAgent.from_tools(self.get_tools(), llm=self.llm, system_prompt=self.get_system_prompt())

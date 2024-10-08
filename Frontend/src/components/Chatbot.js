@@ -39,11 +39,19 @@ function Chatbot() {
 
   };
 
+  const handleFileUploadSuccess = (fileName) => {
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        id: prevMessages.length + 1, text: `File ${fileName} uploaded successfully!`, sender: 'bot'
+      },
+    ]);
+  };
   return (
     <div className="chatbot">
       <ChatMessages messages={messages} />
       <ChatInput onSendMessage={handleSendMessage} />
-      <MultipleFileUpload multiplefile={[]}/>
+      <MultipleFileUpload onUploadSuccess ={handleFileUploadSuccess}/>
     </div>
   );
 }

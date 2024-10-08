@@ -27,7 +27,9 @@ class DataProcessingAgent:
         self._llm = llm
         self._instruction_parser= InstructionParser(input_data)
         self._synthesize_response= True
-
+        self.identifier="Data Processing Agent"
+    def get_identifier(self)->str:
+        return self.identifier
 
     def clean_data(self, data: str) -> str:
         """
@@ -95,18 +97,17 @@ class DataProcessingAgent:
         ]
         return tools
 
-    def get_agent(self):
+    def create_agent(self):
         """
         Create and return the OpenAIAgent with the tools and system prompt.
         """
         system_prompt = f"""
             You are a data processing agent responsible for cleaning and preprocessing raw data.
             You clean, normalize, and handle missing data before analysis.
-            Current user state: {pprint.pformat(self.state, indent=4)}
         """
 
         return OpenAIAgent.from_tools(
             tools=self.get_tools(),
-            llm=self.llm,
+            llm=self._llm,
             system_prompt=system_prompt,
         )

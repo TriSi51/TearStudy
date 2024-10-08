@@ -1,36 +1,50 @@
 
 from enum import Enum
-from typing import List
+from typing import List,Dict
 import pprint
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.tools import FunctionTool
 from llama_index.llms.openai import OpenAI
 from llama_index.agent.openai import OpenAIAgent
 from ...models import load_model
+from .prompt import *
 
 
-def user_interaction_agent_factory(state: dict) -> OpenAIAgent:
-    # Dummy function to simulate user interaction
-    def ask_user(question: str) -> str:
-        print(f"User Interaction Agent: {question}")
-        return input("User: ").strip()
+class UserInteractionAgent:
+    def __init__(self, state: dict, llm: any,response_from_agents: List[Dict]):
+        self.state = state
+        self.llm = llm
+        self.identifier="User Interaction Agent"
+        self.response_from_agents=response_from_agents
 
-    def handle_user_input(user_input: str) -> str:
-        print(f"Processing user input: {user_input}")
-        state["user_query"] = user_input
-        return f"Received user input: {user_input}"
 
-    tools = [
-        FunctionTool.from_defaults(fn=ask_user),
-        FunctionTool.from_defaults(fn=handle_user_input),
-    ]
-    
-    system_prompt = f"""
-        You are the User Interaction Agent. Your task is to interact with the user by asking questions,
-        receiving input, and relaying it to the Orchestrator Agent or other agents. You also guide the user
-        through their tasks based on their requests.
+    def get_identifier(self)->str:
+        return self.identifier
+
+
+    def answer_user(self) -> str:
+        pass
+
+    def get_tools(self) -> list:
+        """
+        Returns the tools for the user interaction agent.
+        """
+        return [
+            FunctionTool.from_defaults(fn=self.handle_user_input),
+        ]
+
+    def get_system_prompt(self) -> str:
+        """
+        Returns the system prompt for the user interaction agent.
+        """
+        return f"""
+        You are the User Interaction Agent. Your task is to interact with the user.
         
-        Current user state: {pprint.pformat(state, indent=4)}
-    """
-    
-    return OpenAIAgent.from_tools(tools, llm=load_model(), system_prompt=system_prompt)
+        
+        """
+
+    def create_agent(self) -> OpenAIAgent:
+        """
+        Create and return an OpenAIAgent using the LLM and tools.
+        """
+        return OpenAIAgent.from_tools(self.get_tools(), llm=self.llm, system_prompt=self.get_system_prompt())

@@ -1,8 +1,8 @@
 from .base_agent import BaseAgent
-from .AnalysisAgent.agent import analysis_agent_factory
+from .AnalysisAgent.agent import AnalysisAgent
 from .DataProcessingAgent.agent import DataProcessingAgent
-from .ReportGenerationAgent.agent import report_generation_agent_factory
-from .ResearchAssistantAgent.agent import research_assistant_agent_factory
-from .UserInteractionAgent.agent import user_interaction_agent_factory
-from .VisualizeAgent.agent import visualization_agent_factory
+from .ReportGenerationAgent.agent import ReportGenerationAgent
+from .ResearchAssistantAgent.agent import ResearchAssistantAgent
+from .UserInteractionAgent.agent import UserInteractionAgent
+from .VisualizeAgent.agent import VisualizationAgent
 

@@ -3,6 +3,7 @@ from enum import Enum
 
 class PromptType(Enum):
     DATAPREPROCESSING="data_preprocessing"
+    SYNTHESIS="synthesis"
 
 DEFAULT_DATA_PREPROCESSING_INSTRUCTION = (
     "1. Convert the query to executable Python code.\n"
@@ -19,10 +20,11 @@ DEFAULT_DATA_PREPROCESSING_INSTRUCTION = (
     "   - Normalize the data if necessary: apply min-max scaling or z-score normalization.\n"
     "   - Handle missing values using forward-fill, backward-fill, or interpolation where appropriate.\n"
     "9. Replace the original DataFrame in the 'data' key with the cleaned/preprocessed DataFrame for each dictionary in `input_data`.\n"
-    "10. After preprocessing, check if each dataset is relevant:\n"
+    "10. Do not show the output of data. Just make a conclusion if that data has NA values, and what techniques you applied to normalize data and handle missing value"
+    "11. After preprocessing, check if each dataset is relevant:\n"
     "    - A dataset is relevant if it is clean, has no significant missing values, and shows no major outliers.\n"
-    "11. Generate a report that indicates whether each dataset (or the single dataset) is relevant based on the preprocessing results.\n"
-    "12. Write all code in Python and make sure it is clean, well-documented, and efficient.\n"
+    "12. Generate a report that indicates whether each dataset (or the single dataset) is relevant based on the preprocessing results.\n"
+    "13. Write all code in Python and make sure it is clean, well-documented, and efficient.\n"
 )
 
 
@@ -60,5 +62,5 @@ DEFAULT_RESPONSE_SYNTHESIS_PROMPT_TMPL = (
     "Response: "
 )
 DEFAULT_RESPONSE_SYNTHESIS_PROMPT = PromptTemplate(
-    DEFAULT_RESPONSE_SYNTHESIS_PROMPT_TMPL,
+    DEFAULT_RESPONSE_SYNTHESIS_PROMPT_TMPL,prompt_type=PromptType.SYNTHESIS
 )
