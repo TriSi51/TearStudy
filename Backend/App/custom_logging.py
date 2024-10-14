@@ -4,3 +4,5 @@ def setup_logging(logger):
     logging.getLogger().handlers = [logging.StreamHandler()]
     logger.add("file.log", rotation="10 MB")
     return logger
+logger= setup_logging(logger)
+

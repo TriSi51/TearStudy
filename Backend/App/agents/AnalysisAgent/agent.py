@@ -1,28 +1,59 @@
 from enum import Enum
-from typing import List
-import pprint
+from typing import List,Dict
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.tools import FunctionTool
 from llama_index.llms.openai import OpenAI
 from llama_index.agent.openai import OpenAIAgent
+from llama_index.core.base.response.schema import Response
 from ...models import load_model
+from .prompts import ANALYSIS_INSTRUCTION,ANALYSIS_PROMPT
+from ...tools.prompts import DEFAULT_RESPONSE_SYNTHESIS_PROMPT
+from ...tools.output_parser import InstructionParser
 
+from ...custom_logging import logger
 class AnalysisAgent:
-    def __init__(self, state: dict, llm: any):
+    def __init__(self, state: dict, llm: any,input_data:List[Dict]):
         self.state = state
         self.llm = llm
         self.identifier="Analysis Agent"
+        self._synthesize_response= True
+        self._instruction_parser=InstructionParser(input_data)
+
     def get_identifier(self)->str:
         return self.identifier
 
-    def perform_analysis(self, data: str) -> str:
-        """
-        Simulate performing statistical analysis on the provided data.
-        """
-        print(f"Performing analysis on: {data}")
-        analysis_result = f"Analysis result of {data}"
-        self.state["analysis_result"] = analysis_result
-        return analysis_result
+    def generate_and_run_data_analysis_code(self,query_str:str):
+        logger.info("Running data analysis tool!!!!")
+        logger.info(f"analysis query: {query_str}")
+
+        response= self.llm.predict(
+            ANALYSIS_PROMPT,
+            query_str = query_str,
+            instruction_str= ANALYSIS_INSTRUCTION
+        )   
+        logger.info(f"Data analysis response: {response}")
+
+        raw_output = self._instruction_parser.parse(response)
+
+        logger.info(f"Raw_output from data analysis agent: {raw_output}")
+        response_metadata = {
+            "instruction_str": response,
+            "raw_output": raw_output,
+        }
+        
+        if self._synthesize_response:
+            response_str = str(
+                self._llm.predict(
+                    DEFAULT_RESPONSE_SYNTHESIS_PROMPT,
+                    query_str=query_str,
+                    pandas_instructions=response,
+                    pandas_output=raw_output,
+                )
+            )
+        else:
+            response_str = str(raw_output)
+        
+        return Response(response=response_str,metadata= response_metadata )
 
 
     def get_tools(self) -> list:
@@ -30,7 +61,7 @@ class AnalysisAgent:
         Returns the tools for the analysis agent.
         """
         return [
-            FunctionTool.from_defaults(fn=self.perform_analysis),
+            FunctionTool.from_defaults(fn=self.generate_and_run_data_analysis_code),
         ]
 
     def get_system_prompt(self) -> str:

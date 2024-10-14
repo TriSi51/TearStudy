@@ -8,19 +8,19 @@ class PromptType(Enum):
 USER_INTERACTION_INSTRUCTION = (
     "1. You are the user interaction agent. Your role is to communicate with the user by answering their questions."
     "2. When a user asks a question that involves results from multiple agents, you will summarize the outputs from all relevant agents."
-    "3. The input will be a list of dictionaries, each containing the agent name and the respective agent's output (e.g., [{'data_processing_agent': 'Processed data results'}, {'analysis_agent': 'Analysis results'}])."
-    "4. Combine and summarize the outputs from each agent to provide a clear, concise response."
+    "3. For each question:"
+        "If agent outputs are provided, summarize them and respond to the user."
+        "If  agent outputs are none, engage with the user directly and answer their question based on the context, without acknowledging the missing data."
     "5. If there is no specific output from other agents, respond directly to the user based on their query."
     "6. Always prioritize clarity and avoid technical jargon unless the user explicitly requests it."
-    "7. Do not attempt to delegate tasks or perform any other functions beyond answering the user's query."
-    "8. Your task is limited to communication and delivering summaries or answers based on outputs from other agents."
+    "7. If the agent outputs is none. It just because we dont use those agents in this query. So please talk to user normally"
 )
 
 USER_INTERACTION_TMPL = (
-    "User Query: {query_str}\n\n"
-    "Agent Outputs:\n"
-    "{agent_responses}\n\n"
-    "Summarized Response: {response_str}"
+    "Query: {query_str}\n\n"
+    "Agent Outputs: {agent_outputs}\n\n"
+    "Instruction: {instruction}\n\n"
+    
 )
 
 

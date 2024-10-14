@@ -14,6 +14,8 @@ from llama_index.core.tools import FunctionTool
 from llama_index.agent.openai import OpenAIAgent
 import logging
 from ...tools.output_parser import InstructionParser
+from ...custom_logging import logger
+
 
 from .prompt import *
 class DataProcessingAgent:
@@ -28,28 +30,27 @@ class DataProcessingAgent:
         self._instruction_parser= InstructionParser(input_data)
         self._synthesize_response= True
         self.identifier="Data Processing Agent"
+        
+
     def get_identifier(self)->str:
         return self.identifier
 
-    def clean_data(self, data: str) -> str:
-        """
-        Simulate cleaning data by replacing 'NA' values.
-        """
-        print(f"Cleaning data: {data}")
-        cleaned_data = data.replace("NA", "0")  # Example of cleaning missing values
-        self.state["cleaned_data"] = cleaned_data
-        return f"Cleaned data: {cleaned_data}"
-    def generate_and_run_data_preprocessing_code(self, query_str: str) -> dict:
-        """Generate code for a given query and execute the code to preprocessing the dataframe."""
 
-        response = self._llm.predict(
-            DEFAULT_DATA_PREPROCESSING_PROMPT,
-            query_str=query_str,
-            instruction_str=DEFAULT_DATA_PREPROCESSING_INSTRUCTION,
-        )
+    def generate_and_run_data_preprocessing_code(self, query_str: str):
 
+        logger.info("im using generate and run data preprocessing code tool")
+        logger.info(f"Query: {query_str}")
+        try: 
+            response = self._llm.predict(
+                DEFAULT_DATA_PREPROCESSING_PROMPT,
+                query_str=query_str,
+                instruction_str=DEFAULT_DATA_PREPROCESSING_INSTRUCTION
+            )
+        except Exception as e:
+            raise Exception(str(e))
+        logger.info(f"Data pre processing generated:{response}")
         raw_output = self._instruction_parser.parse(response)
-
+        logger.info(f"The raw output of data processing agent: {raw_output}")
         response_metadata = {
             "instruction_str": response,
             "raw_output": raw_output,
@@ -61,39 +62,21 @@ class DataProcessingAgent:
                     DEFAULT_RESPONSE_SYNTHESIS_PROMPT,
                     query_str=query_str,
                     pandas_instructions=response,
-                    pandas_output=raw_output,
+                    pandas_output=raw_output
                 )
             )
         else:
             response_str = str(raw_output)
 
         return Response(response=response_str, metadata=response_metadata)
-    def normalize_data(self, data: str) -> str:
-        """
-        Simulate normalizing data.
-        """
-        print(f"Normalizing data: {data}")
-        normalized_data = data.lower()  # Example normalization
-        self.state["normalized_data"] = normalized_data
-        return f"Normalized data: {normalized_data}"
-
-    def handle_missing_values(self, data: str) -> str:
-        """
-        Simulate handling missing values by replacing them.
-        """
-        print(f"Handling missing values in: {data}")
-        filled_data = data.replace("missing", "filled")
-        self.state["filled_data"] = filled_data
-        return f"Data with missing values handled: {filled_data}"
 
     def get_tools(self):
         """
         Return the tools required for data processing.
         """
         tools = [
-            FunctionTool.from_defaults(fn=self.clean_data),
-            FunctionTool.from_defaults(fn=self.normalize_data),
-            FunctionTool.from_defaults(fn=self.handle_missing_values),
+            FunctionTool.from_defaults(fn=self.generate_and_run_data_preprocessing_code),
+    
         ]
         return tools
 

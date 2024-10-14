@@ -5,25 +5,30 @@ class PromptType(Enum):
     ANALYSIS="analysis"
 
 ANALYSIS_INSTRUCTION = (
-    "1. You are the Analysis Agent. You have received cleaned/preprocessed data as input.\n"
-    "2. Your task is to perform Exploratory Data Analysis (EDA) on the data like a data analyst.\n"
-    "3. The input data is a variable called `cleaned_data`, which is a list of dictionaries.\n"
-    "   - Each dictionary contains three keys: 'filename', 'filetype', and 'data'.\n"
-    "   - The key 'data' contains the pandas DataFrame ready for analysis.\n"
-    "4. For each DataFrame, perform the following EDA tasks:\n"
-    "   - Display the basic statistics of the data: mean, median, mode, variance, standard deviation, and range.\n"
-    "   - Plot histograms for each numerical feature.\n"
-    "   - Generate pair plots to visualize relationships between numerical features.\n"
-    "   - Plot bar charts for categorical data to show the distribution.\n"
-    "   - Detect and visualize any outliers using box plots.\n"
-    "5. Identify key patterns or trends in the data.\n"
-    "6. Check for correlations among features using a correlation heatmap.\n"
-    "7. Summarize key insights, such as: are there any correlations, clusters, outliers, or trends worth noting?\n"
-    "8. Generate a final report summarizing all the key findings from the EDA.\n"
-    "9. Use clean, well-documented code in Python. Write everything in markdown format and do not include extra information outside the EDA task.\n"
+    "1. You need to generate python code based on the query.\n"
+    "2. Provide a brief summary of the data types used for variables, including the most common data types and any that require special attention.\n"
+    "3. Provide a brief summary of the data, including count, mean, std, min, 25%, 50%, 75%, max for each column.\n"
+    "4. Determine the data types of each column and convert them to appropriate types if necessary.\n"
+    "6. Provide insights and interpretations for each analysis step to help understand the significance of the findings.\n"
+    "7. Suggest appropriate statistical methods for deeper analysis when relevant.\n"
+    "8. Ensure the analysis is reproducible and clearly documented.\n"
 )
 
-ANALYSIS_TEMPLATE=
+
+ANALYSIS_TEMPLATE= (
+    "You are an advanced data analysis agent that analyze the data. The data is stored in the variable `input_data`.\n"
+
+    "`input_data` is a list of dictionaries, where each dictionary contains the following keys:\n"
+    "   - 'filename': The name of the file.\n"
+    "   - 'filetype': The type of the file (e.g., csv, xlsx).\n"
+    "   - 'data': A pandas DataFrame that has been loaded from the file and needs to be processed.\n"
+    "Follow these instructions:\n"
+    "{instruction_str}\n"
+    "Query: {query_str}\n\n"
+    "Your goal is to help users understand their data by providing clear and detailed insights.\n"
+    "Ensure the analysis is well-documented, reproducible, and presented in a professional yet approachable manner.\n"
+    "Do not generate code to display the datatype of each column. Instead, summarize the data types and highlight any that require special attention.\n"
+)
 
 
 ANALYSIS_PROMPT= PromptTemplate(ANALYSIS_TEMPLATE,
