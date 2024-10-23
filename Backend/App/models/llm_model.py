@@ -5,10 +5,10 @@ from llama_index.llms.ollama import Ollama
 from llama_index.llms.gemini import Gemini
 # from ..tools import OpenAIMultiModal
 
-from .const import LLM_PROVIDER, MODEL_ID, TEMPERATURE,LLM_VISION_PROVIDER,MODEL_VISION_ID
+from .const import MODEL_ID, TEMPERATURE,LLM_VISION_PROVIDER,MODEL_VISION_ID
 
 from ..custom_logging import logger
-def load_model():
+def load_model(LLM_PROVIDER= "openai"):
     """
     Select a model for text generation using multiple services.
     Args:

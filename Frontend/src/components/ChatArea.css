@@ -1,0 +1,136 @@
+/* ChatInterface.css */
+.chat-container {
+    position: absolute;
+    left: 582px;
+    top: 126px;
+    width: 792px;
+    height: 719px;
+    background-color: white;
+    border-radius: 100px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform 3s ease-in-out, opacity 3s ease-in-out;
+  }
+  
+
+  .chat-container.slide-in {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  
+  .chat-container.slide-out {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  
+  .messages-area {
+    flex: 1;
+    padding: 24px;
+    background-color: rgba(239, 246, 255, 0.3);
+    overflow-y: auto;
+  }
+  
+  .messages-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 0 16px;
+  }
+  
+  .message-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .bot-message {
+    justify-content: flex-start;
+    padding-top: 10px;
+    padding-left: 10px
+  }
+  
+  .user-message {
+    justify-content: flex-end;
+    padding-right: 10px; 
+  }
+  
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .bot-avatar img,
+  .user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .message-bubble {
+    max-width: 70%;
+    padding: 8px 16px;
+    border-radius: 16px;
+    font-size: 14px;
+  }
+  
+  .bot-message .message-bubble {
+    background-color: white;
+    color: #1F2937;
+    margin-left: 4px;
+  }
+  
+  .user-message .message-bubble {
+    background-color: #3B82F6;
+    color: white;
+    margin-right: 4px;
+  }
+  
+  .input-area {
+    padding: 16px;
+    padding-bottom: 75px;
+    background-color: white;
+    border-top: 1px solid #E5E7EB;
+  }
+  
+  .input-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  
+  .input-wrapper input {
+    flex: 1;
+    padding: 8px 16px;
+    border-radius: 9999px;
+    border: 1px solid #E5E7EB;
+    outline: none;
+    transition: border-color 0.2s ease;
+  }
+  
+  .input-wrapper input:focus {
+    border-color: #3B82F6;
+  }
+  
+  .input-wrapper button {
+    padding: 8px;
+    border-radius: 50%;
+    border: none;
+    background-color: transparent;
+    color: #3B82F6;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+  }
+  
+  .input-wrapper button:hover {
+    background-color: #EFF6FF;
+  }

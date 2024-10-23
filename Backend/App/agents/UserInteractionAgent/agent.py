@@ -28,11 +28,11 @@ class UserInteractionAgent:
     
     def interact_with_user(self, query_str: str):
 
-        response = self._llm.predict(
+        response = self.llm.predict(
             USER_INTERACTION_PROMPT,
             query_str=query_str,
-            agents_output= self.agent_responses,
-            instruction_str=USER_INTERACTION_INSTRUCTION,
+            agent_outputs= self.agent_responses,
+            instruction=USER_INTERACTION_INSTRUCTION,
             
         )
 

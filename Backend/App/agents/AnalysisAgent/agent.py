@@ -43,7 +43,7 @@ class AnalysisAgent:
         
         if self._synthesize_response:
             response_str = str(
-                self._llm.predict(
+                self.llm.predict(
                     DEFAULT_RESPONSE_SYNTHESIS_PROMPT,
                     query_str=query_str,
                     pandas_instructions=response,

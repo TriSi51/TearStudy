@@ -314,7 +314,7 @@ class InstructionParser(ChainableOutputParser):
 
         return "No output produced."
 
-    def output_processor_comprehensive_data_analysis(self, output: str, vision_llm:any,timeout: int = 2000, **output_kwargs: Any) -> str:
+    def output_data_analysis_parser(self, output: str, vision_llm:any,timeout: int = 2000, **output_kwargs: Any) -> str:
         """Process outputs in a default manner with a timeout."""
         if sys.version_info < (3, 9):
             logger.warning(

@@ -7,6 +7,7 @@ from llama_index.core.tools import FunctionTool
 from llama_index.agent.openai import OpenAIAgent
 from llama_index.core.base.response.schema import Response
 from llama_index.core.base.llms.types import ChatMessage,MessageRole
+from llama_index.core.agent import ReActAgent
 from App.agents import (
     ReportGenerationAgent,
     DataProcessingAgent,
@@ -29,6 +30,7 @@ class Speaker(str,Enum):
     USER_INTERACTION="user_interaction"
 
 
+    
 class OrchestrationManager:
     state = {
         "username": None,
@@ -39,6 +41,8 @@ class OrchestrationManager:
         "current_speaker": None,
         "just_finished": False,
         "uploaded":False,
+        "work_flow": None,
+        
     }
 
 
@@ -47,7 +51,7 @@ class OrchestrationManager:
     current_speaker = None
     administrator_prompt=None
     agent_responses={}
-    llm = load_model()
+    llm = load_model(LLM_PROVIDER="openai")
 
     @classmethod
     def get_agent_factory_map(cls):
@@ -112,12 +116,25 @@ class OrchestrationManager:
         """Creates the orchestration agent that will manage which agent to call next."""
                 
         def decide_next_agent(speaker: Speaker,query_needed:str):
+
+            logger.info(f"using tool: {speaker}")
+            logger.info(f"using query: {query_needed}")
+            response_dict = {
+                "speaker": str(speaker),
+                "query_needed": query_needed
+            }
+            response_str=json.dumps(response_dict)
+            logger.info(f"response_str: {response_str}")
+            return response_str
+
+        def retry_decide_next_agent(speaker: Speaker, query_needed:str, prev_bug: str):
             try:
-                logger.info(f"using tool: {speaker}")
+                logger.info(f"using retry tool: {speaker}")
                 logger.info(f"using query: {query_needed}")
+                logger.info(f"previous bug: {prev_bug}")
                 response_dict = {
-                    "speaker_value": str(speaker),
-                    "query": query_needed
+                    "speaker": str(speaker),
+                    "query_needed": query_needed
                 }
                 response_str=json.dumps(response_dict)
                 logger.info(f"response_str: {response_str}")
@@ -126,50 +143,55 @@ class OrchestrationManager:
             except Exception as e:
                 logger.info(f"This tool encounter error {str(e)}")
                 raise Exception("We have error when using tool for orchestration agent!!!")
-            
+        
+        def generate_workflow(workflow: str):
+            logger.info("workflow")
+            return workflow
         tools = [
-            FunctionTool.from_defaults(fn=decide_next_agent)
+            FunctionTool.from_defaults(fn=generate_workflow)
         ]
 
         system_prompt =  ( f"""
         You are an orchestration agent.
-        Your job is to decide which agent to run next based on the user's inputs and the chat history. Agents are identified by short strings in the format '{Speaker.RESEARCH_ASSISTANT.value}', '{Speaker.DATA_PROCESSING.value}', etc. For some complex tasks, you may need to use multiple agents consecutively (e.g., use the data processing agent before using the analysis agent).
+        You may receive:
+
+            User Input: An initial message from the user, denoted as "user: ...".
+            Agent Response: A response from another agent after completing a task.        
+         
 
         Your task includes:
-        1. Evaluate the user’s current query from the chat history to determine which agent should handle the task.
-        2. Paraphrase the user input to generate a query string tailored to the task the selected agent should perform. This query must provide clear, actionable instructions to the agent about what needs to be done based on the user’s request.
-        3. For complex tasks, delegate work to multiple agents in sequence. For example, if the user asks for data analysis, ensure that the data is first processed using the Data Processing Agent, then analyzed using the Analysis Agent.
-        4. Once the required agents have completed their tasks, always pass the final results to the User Interaction Agent, who will communicate the outcome to the user.
-        5. Based on the user input and chat history, select one of these agents to run next and generate an appropriate query:
-        * "{Speaker.RESEARCH_ASSISTANT.value}" - if the user asks for help gathering research materials. Generate a query such as "Find relevant papers on [topic]."
-        * "{Speaker.DATA_PROCESSING.value}" - if the user has provided raw data that needs cleaning, preprocessing, or normalization. Generate a query such as "Clean and preprocess the dataset."
-        * "{Speaker.ANALYSIS.value}" - if the data has been processed and the user wants to perform statistical analysis or machine learning. Generate a query such as "Perform analysis on the dataset using [specific technique]."
-        * "{Speaker.VISUALIZATION.value}" - if the user requests data visualizations such as charts or graphs. Generate a query such as "Generate a visualization for [analysis result]."
-        * "{Speaker.REPORT_GENERATION.value}" - if the user requests to compile a comprehensive report based on the analysis and visualizations. Generate a query such as "Compile a report from the analysis results."
-        * "{Speaker.USER_INTERACTION.value}" - to communicate with the user and deliver any results or outputs generated by other agents.
+        1. Create a workflow contain list of agents and query you give to those agents if you receive the input from user to complete user query. We will proceed the work flow from agent1 to agent2. 
+        2. 
+        5. You can select from the following agents for constructing the workflow:
+        * "{Speaker.RESEARCH_ASSISTANT.value}" -  To gather relevant research materials.
+        * "{Speaker.DATA_PROCESSING.value}" - To handle tasks like data cleaning, preprocessing, or normalization.
+        * "{Speaker.ANALYSIS.value}" - To conduct statistical analysis or machine learning, but only if data has already been processed by {Speaker.DATA_PROCESSING.value}
+        * "{Speaker.VISUALIZATION.value}" - To create visual representations of the data, such as charts or graphs.
+        * "{Speaker.REPORT_GENERATION.value}" - To compile a comprehensive report based on analysis and visualizations.
+        * "{Speaker.USER_INTERACTION.value}" - To communicate with the user, deliver results, or provide updates.
 
         Remember:
-        - Paraphrase the user's input to form a concise query that captures the essence of the user's request.
-        - Do not ask user what they want to do. Just do your best to complete user query
-        - Do not be conversational or perform any other task except selecting the appropriate agent to run next and generating the query string for it.
-        The output must follow this format:
+        - Paraphrase the User's Input: Create a concise query for each agent that captures the essence of what needs to be done.
+        - Avoid Asking the User for Decisions: Make your best attempt to complete the user’s request without asking them what they want.
+        - When creating a workflow, output the tasks in the following format:
         {{
-            "speaker": "agent_value", "query_needed": "generated_query"
+            "agent": "query", 
+            "agent": "query", 
+            "agent": "query",
+             ... 
         }}
+        We will run from the first agent in the dict until we meet the final agent. Please replace "agent" with the actual agent name and replace "query" with a query
+        if you can answer without using tool anymore, just give the answer
+
+        """) 
 
 
-        """)
-
-
-        # The output must follow this format:
-        # {{
-        #     "speaker": "agent_value", "query_needed": "generated_query"
-        # }}
 
         return OpenAIAgent.from_tools(
             tools,
             llm=cls.llm,
             system_prompt=system_prompt,
+            verbose=True
         )
 
 
@@ -203,49 +225,54 @@ class OrchestrationManager:
         except json.JSONDecodeError:
             raise Exception("error extract speaker value and query")
     @classmethod
-    def run_conversation(cls,user_message):
+    def extract_work_flow(cls,response:str):
+        try:
+            logger.info(f"response: {response}")
+            workflow= json.loads(response)
+            if not isinstance(workflow, dict):
+                raise Exception("Workflow not type dict")
+            return workflow
+        
+        except json.JSONDecodeError:
+            raise Exception("error extract workflow")
+    @classmethod
+    def run_conversation(cls,input_message):
         """Main loop to run the multi-agent orchestration conversation."""
 
         current_history=cls.root_memory.get()
-        logger.info(f"current history: {current_history}")
-        next_speaker = None
-        while next_speaker != Speaker.USER_INTERACTION.value:
-            # If there is a current speaker, continue with that agent
-            if cls.state.get("current_speaker"):
-                next_speaker = cls.state["current_speaker"]
-            else:
-                # Otherwise, call the orchestration agent to get the next speaker
-                orchestration_response = cls.orchestration_agent_factory().chat(
-                    user_message, chat_history=current_history
-                )
-                logger.info(f'orchestration: {orchestration_response}')
+        input_message= "user: " + input_message
+        # logger.info(f"current history: {current_history}")
 
-                # Ensure the orchestration response returns both next_speaker and query
-                try:
-                    orchestration_response=orchestration_response.__str__()
-                    # Unpack the response
-                    next_speaker,query= cls.extract_speak_and_query(orchestration_response)
-                except ValueError:
-                    raise Exception(f"Invalid response from Orchestration Agent: {orchestration_response}")
-                
-            logger.info(f"next speaker is:{next_speaker}")
+        # Generate work_flow
+        orchestration_response= cls.orchestration_agent_factory().chat(
+            input_message, chat_history= current_history
+        )
+        workflow= cls.extract_work_flow(orchestration_response.__str__())
+
+        next_speaker = None
+        for agent,query in workflow.items():
+
+        
+            # If there is a current speaker, continue with that agent
+            logger.info("new loop")
+
+        
             # Get the agent for the next task
-            cls.current_speaker = cls.get_next_agent(next_speaker)
-            if cls.current_speaker==Speaker.USER_INTERACTION.value:  # fix later
-                agent_response = cls.current_speaker.chat(user_message, chat_history=current_history)
-                cls.agent_responses={}
-            else:
+            cls.current_speaker = cls.get_next_agent(agent)
+            agent_response = cls.current_speaker.chat(query, chat_history=current_history)
+            cls.agent_responses = {}
+            
             # Run the agent and capture the output (the next agent will use this output)
-                agent_response = cls.current_speaker.chat(query, chat_history=current_history)
             logger.info(f"Agent response: {agent_response.__str__()}")
             cls.agent_responses[next_speaker]= agent_response.__str__()
             # Add the response to chat history
             new_history = cls.current_speaker.memory.get_all()
             cls.root_memory.set(new_history)
 
+                        
+
             # Update the user_message with the output of the previous agent
-            user_message = f"{cls.current_speaker} response:" +agent_response.__str__()
+            input_message = f"{cls.current_speaker} response:" +agent_response.__str__()
             cls.state["current_speaker"] = None
-        
 
         return agent_response

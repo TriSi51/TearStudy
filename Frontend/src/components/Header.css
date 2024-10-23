@@ -1,0 +1,66 @@
+.header-container {
+    height: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+ /* light blue background */
+  }
+  
+  .nav-container {
+    background-color: white;
+    width: 684px;
+    height: 60px;
+    padding: 0.5rem;
+    border-radius: 40px;
+    position: absolute;
+    top: 14px;
+    left: 600px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 120px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  .nav-button {
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  
+  .nav-icon {
+    width: 57px;
+    height: 42px;
+    color: #9ca3af;
+  }
+  
+  
+  .nav-button:hover {
+    background-color: #f3f4f6;
+  }
+  
+  .nav-button.active {
+    background-color: #3b82f6;
+    padding: 0.25rem;
+  }
+  
+  .nav-button.active .nav-icon {
+    color: white;
+    width: 24px;
+    height: 24px;
+  }
+
+
+  .logo {
+    width: 3rem;
+    height: 3rem;
+    position: absolute; /* Position the logo absolutely within its container */
+    top: 4px; /* Adjust the y-coordinate */
+    left: 44px; /* Adjust the x-coordinate */   
+  }
