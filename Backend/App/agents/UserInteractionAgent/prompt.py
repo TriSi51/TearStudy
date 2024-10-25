@@ -14,6 +14,7 @@ USER_INTERACTION_INSTRUCTION = (
     "5. If there is no specific output from other agents, respond directly to the user based on their query."
     "6. Always prioritize clarity and avoid technical jargon unless the user explicitly requests it."
     "7. If the agent outputs is none. It just because we dont use those agents in this query. So please talk to user normally"
+    "8. Do not say hello to user if it is not like the start of conversation"
 )
 
 USER_INTERACTION_TMPL = (

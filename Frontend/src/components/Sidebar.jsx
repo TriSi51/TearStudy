@@ -1,16 +1,26 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import './Sidebar.css';
 import newChatIcon from '../assets/newchat.png'
 
 const Sidebar = ({ chatItems, onChatItemClick, onNewChat }) => {
+  const historyRef = useRef(null); // Ref to control scrolling
+
+  // Scroll to top whenever a new chat is added
+  useEffect(() => {
+    if (historyRef.current) {
+      historyRef.current.scrollTo(0, 0); // Scroll to the top when new chat is added
+    }
+  }, [chatItems]);
+
   const getStatusColor = (status) => {
     const statusColors = {
-      completed: "status-completed",
-      active: "status-active",
-      pending: "status-pending"
+      completed: 'status-completed',
+      active: 'status-active',
+      pending: 'status-pending',
     };
-    return statusColors[status] || "";
+    return statusColors[status] || '';
   };
+
 
   return (
     <aside className="sidebar">

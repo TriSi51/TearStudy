@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Send } from 'lucide-react';
+import axios from 'axios'; 
 import './ChatArea.css';
 import userAvatar from '../assets/avatar.png'; 
 import botAvatar from '../assets/bot.png';
@@ -10,7 +11,9 @@ const ChatArea = ({ messages }) => {
 
 
   const combinedMessages = [...messages, ...localMessages];
-  const handleSubmit = (e) => {
+
+
+  const handleSubmit = async(e) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
     // Handle message submission logic
@@ -25,6 +28,28 @@ const ChatArea = ({ messages }) => {
 
   setLocalMessages([...localMessages, newMessage]);  // Update localMessages with new message
   setInputValue('');  // Clear the input field after submission
+  try {
+    const response= await axios.post('http://127.0.0.1:8000/message', {
+      message: newMessage.text,
+    });
+    console.log('Response from backend:', response.data.message.response);
+    const botMessage = response.data.message.response
+    setLocalMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        id:localMessages.length +1 ,text: botMessage, isBot: true
+      },
+    ]);   
+  }
+  catch(error){
+    setLocalMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        id:localMessages.length+1,text: 'Error: Could not reach server',isBot: true
+      }
+    ])
+  }
+
 };
 
   return (

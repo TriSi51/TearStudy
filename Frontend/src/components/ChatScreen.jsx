@@ -54,7 +54,7 @@ const ChatScreen = () => {
     };
 
     // Add the new chat to the list
-    setChatItems([...chatItems, newChat]);
+    setChatItems([newChat, ...chatItems]);
 
     // Automatically select the new chat
     setSelectedChat(newChat);
